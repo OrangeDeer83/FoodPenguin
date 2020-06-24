@@ -6,6 +6,8 @@ var pic_flag = false;
 
 window.onload = function(){
 	get_store_info();
+	list_menu_update();
+	change_page(1);
 }
 
 function change_page(num){
@@ -16,20 +18,19 @@ function change_page(num){
 		else{
 			document.getElementById("info" + i).setAttribute("style", "display:none");	
 		}
-		if (i == 2) {
-			list_order_s();
-			call_order = setInterval(list_order_s,30000);
-		}
-		else {
-			clearInterval(call_order);
-		}
+	}
+	if (num == 2) {
+		list_order_s();
+		call_order = setInterval(list_order_s,60000);
+	}
+	else {
+		clearInterval(call_order);
 	}
 }
 
 function logout(){
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", "http://114.35.143.250:5000/api/Logout");
-	xhr.setRequestHeader('Content-Type', 'application/json');
 	xhr.onload = function(){
 		var rsp_json = JSON.parse(xhr.responseText);
 		if (rsp_json.rsp_code == "200") {
@@ -46,16 +47,25 @@ function logout(){
 function update_onoffline(){
 	var status = document.getElementById("status").value;
 	var xhr = new XMLHttpRequest();
-	xhr.open("GET", "http://114.35.143.250:5000/api/update_onoffline");
+	xhr.open("POST", "http://114.35.143.250:5000/api/update_onoffline");
 	xhr.setRequestHeader('Content-Type', 'application/json');
+	if (status == "上線") {
+			xhr.send(JSON.stringify({"status": "1"}));
+		}
+	else if (status == "下線") {
+		xhr.send(JSON.stringify({"status": "0"}));
+	}
 	xhr.onload = function(){
 		var rsp_json = JSON.parse(xhr.responseText);
-		if (rsp_json == "200") {
-			if (status == "1") {
+		if (rsp_json.rsp_code == "200") {
+			if (status == "上線") {
 				alert("已上線");
 			}
-			else if (status == "0") {
+			else if (status == "下線") {
 				alert("已下線");
+			}
+			else {
+				alert("錯誤");
 			}
 		}
 		else {
@@ -65,10 +75,9 @@ function update_onoffline(){
 }
 
 function get_store_info(){
-	var item = ["name", "addr", "tel", "start_hour", "start_min", "end_hour", "end_min", "pic"];
+	var item = ["name", "addr", "tel", "start_hour", "start_min", "end_hour", "end_min", "pic", "online"];
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", "http://114.35.143.250:5000/api/get_store_info");
-	xhr.setRequestHeader('Content-Type', 'application/json');
 	xhr.send();
 	xhr.onload = function(){
 		var d = new Date();
@@ -97,6 +106,7 @@ function get_store_info(){
 				document.getElementById(item[i]).setAttribute("value", rsp_json[item[i]]);
 		}
 		document.getElementById("pic").setAttribute("src", "http://114.35.143.250/Food_Penguin/api/static/img/store/" + rsp_json[item[7]] + "?v=" + time);
+		document.getElementById("status").getElementsByTagName("option")[rsp_json["online"]].selected = true;
 	}
 }
 
@@ -166,123 +176,79 @@ function update_store_info(){
 function list_menu_update(){
 	document.getElementById("list");
 	var xhr = new XMLHttpRequest();
-	xhr.open("GET", "http://114.35.143.250:5000/api/list_menu_test");
+	xhr.open("GET", "http://114.35.143.250:5000/api/list_menu_update");
 	xhr.onload = function(){
-		var menu = xhr.responseText;
-		var menu_json = JSON.parse(menu);
-		var tbody = document.getElementById("menu");
-		var name;
-		var price;
-		var btn;
-		var change;
-		var del;
-		var add;
+		var menu_json = JSON.parse(xhr.responseText);
+		var add = "";
 		for (var i = 0; i < menu_json.food.length; i++) {
-			 //菜名
-			 name = document.createElement("td");
-			 name.setAttribute("id", "name_" + i);
-			 name.innerHTML = menu_json.food[i][0];
-			 //價格
-			 price = document.createElement("td");
-			 price.setAttribute("id", "price_" + i);
-			 price.innerHTML = "$" + menu_json.food[i][1];
-			 //按鈕
-			 btn = document.createElement("td");
-			 //修改
-			 change = document.createElement("button");
-			 change.setAttribute("class", "btn btn-warning");
-			 change.setAttribute("onclick", "change(" + i + ");");
-			 change.innerHTML = "修改";
-			 //刪除
-			 del = document.createElement("button");
-			 del.setAttribute("class", "btn btn-danger");
-			 del.setAttribute("onclick", "del_menu(" + i + ");");
-			 del.innerHTML = "刪除"
-			 btn.appendChild(change);
-			 btn.innerHTML += "&nbsp";
-			 btn.appendChild(del);
-			 tbody.appendChild(name);
-			 tbody.appendChild(price);
-			 tbody.appendChild(btn);
+			add += "<tr><td id='name_" + i + "'>" + menu_json.food[i][0] + "</td><td id='price_" + i + "'>$" + menu_json.food[i][1] + "</td><td><button class='btn btn-warning' onclick='change(" + i + ");' id='change_" + i + "'>修改</button>  <button class='btn btn-danger' onclick='delete_menu(" + i + ");'  id='del_" + i + "'>刪除</button></td></tr>";
 		}
-		name = document.createElement("td");
-		name.setAttribute("id", "name_" + menu_json.food.length);
-		name.innerHTML = "";
-		price = document.createElement("td");
-		price.setAttribute("id", "price_" + menu_json.food.length);
-			 price.innerHTML = "";
-		btn = document.createElement("td");
-		add = document.createElement("button");
-		add.innerHTML = "新增";
-		add.setAttribute("id", "add");
-		add.setAttribute("class", "btn btn-warning");
-		add.setAttribute("onclick", "add" + menu_json.food.length + ");");
-		btn.appendChild(add);
- 		tbody.appendChild(name);
-		tbody.appendChild(price);
-		tbody.appendChild(btn);
+		add += "<tr><td id='name_" + menu_json.food.length + "'></td><td id='price_" + menu_json.food.length + "'></td><td><button class='btn btn-warning' id='add' onclick='add(" + menu_json.food.length + ");'>新增</button></td></tr>";
+		document.getElementById("menu").innerHTML = add;
 	}
 	xhr.send();
 }
 
 function change(num){
-	document.querySelector("button").innerHTML = "上傳";
-	btn.setAttribute("onclick", "update(" + num + ");");
+	document.getElementById("del_" + num).setAttribute("style", "display: none");
+	var btn = document.getElementById("change_" + num);
+	btn.innerHTML = "上傳";
+	btn.setAttribute("onclick", "update_menu(" + num + ");");
 	//名稱部分
 	var name = document.getElementById("name_" + num);
 	old_name = name.innerHTML;
-	name.innerHTML = "";
-	var str = name.outerHTML.replace("div", "input");
-	name.outerHTML = str;
-	document.getElementById("name_" + num).setAttribute("value", old_name);
+	name.innerHTML = "<input type='text' id='name_add" + num + "' value='" + old_name + "' required='required'>";
 	//價格部分
 	var price = document.getElementById("price_" + num);
 	var old_price = price.innerHTML;
-	price.innerHTML = "";
-	str = price.outerHTML.replace("div", "input");
-	price.outerHTML = str;
-	document.getElementById("price_" + num).setAttribute("value", old_price);
+	old_price = old_price.replace("$", "");
+	price.innerHTML = "$<input type='text' id='price_add" + num + "' value='" + old_price + "' required='required'>";
 }
 
 function add(num){
+	for (var i = 0; i < num; i++) {
+		document.getElementById("del_" + i).setAttribute("style", "display: none");
+		document.getElementById("change_" + i).setAttribute("style", "display: none");
+	}
 	var btn = document.getElementById("add");
 	old_name = "";
-	btn.setAttribute("onclick", "update(" + num + ");");
+	btn.setAttribute("onclick", "update_menu(" + num + ");");
 	btn.innerHTML = "確定新增";
 	btn.setAttribute("class", "btn btn-danger");
-	var name = document.getElementById("name_" + num);
-	var str = name.outerHTML.replace("div", "input");
-	name.outerHTML = str;
-	var price = document.getElementById("price_" + num);
-	str = price.outerHTML.replace("div", "input");
-	price.outerHTML = str;
+	document.getElementById("name_" + num).innerHTML = "<input type='text' id='name_add" + num + "' required='required'>";
+	document.getElementById("price_" + num).innerHTML = "$<input type='text' id='price_add" + num + "'' required='required'>";
 }
 
 function update_menu(num){
-	var name = document.getElementById("name_" + num);
-	var price = document.getElementById("price_" + num);
+	var name = document.getElementById("name_add" + num).value;
+	var price = document.getElementById("price_add" + num).value;
 	var correct = false;
-	var xhr = XMLHttpRequest();
-	xhr.open("PUT", "http://114.35.143.250:5000/api/update_menu");
+	var xhr = new  XMLHttpRequest();
+	xhr.open("POST", "http://114.35.143.250:5000/api/update_store_menu");
 	xhr.setRequestHeader('Content-Type', 'application/json');
-	if (price < 10000 && price > 0) {
-		correct = true;
+	if (price == "" || name == "") {
+		alert("請勿輸入空值");
 	}
-	else {
+	else if (price > 10000 || price < 0) {
 		alert("價格請勿超過9999元或是低於0元");
 	}
+	else {
+		correct = true;
+	}
 	if (correct) {
-		xhr.send(JSON.stringfy({"old_name": old_name, "name": name, "price": price}));
+		xhr.send(JSON.stringify({"old_name": old_name, "name": name, "price": price}));
 		xhr.onload = function(){
 			var rsp = JSON.parse(xhr.responseText);
 			if (rsp.rsp_code == "201") {
 				alert("修改成功!!!");
+				list_menu_update();
 			}
 			else if(rsp.rsp_code == "401") {
 				alert("修改失敗，請再試一次!");
 			}
 			else if(rsp.rsp_code == "200") {
 				alert("新增成功!!!");
+				list_menu_update();
 			}
 			else {
 				alert("新增失敗，請再試一次!");
@@ -292,16 +258,18 @@ function update_menu(num){
 }
 
 function delete_menu(num){
-	var old_name = document.getElementById("name_" + num);
+	var old_name = document.getElementById("name_" + num).innerHTML;
 	var check = confirm("確定要刪除" + old_name + "嗎?");
 	if (check == true) {
-		xhr.open("DELETE", "http://114.35.143.250:5000/api/delete_menu");
+		var xhr = new XMLHttpRequest();
+		xhr.open("POST", "http://114.35.143.250:5000/api/delete_menu");
 		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.send(JSON.stringfy({"name": old_name}));
+		xhr.send(JSON.stringify({"name": old_name}));
 		xhr.onload = function(){
 			var rsp = JSON.parse(xhr.responseText);
 			if (rsp.rsp_code == "200") {
 				alert("刪除成功!!!");
+				list_menu_update();
 			}
 			else {
 				alert("刪除失敗，請再試一次!");
@@ -312,55 +280,57 @@ function delete_menu(num){
 }
 
 function list_order_s(){
-	var list = document.getElementById("order_list");
 	var xhr = new XMLHttpRequest;
 	xhr.open("GET", "http://114.35.143.250:5000/api/list_order");
 	xhr.onload = function(){
 		list_json = JSON.parse(xhr.responseText);
 		var add = "";
 		count = 0;
-		for (var i = 0; i < list_json.order.length; i++) {
-			add += "<tr><td><p type='button' data-toggle='modal' data-target='#storeModal' id='customer_" + list_json.order[i][0] + "' onclick='get_order_s2c(" + list_json.order[i][0] + ";'>" + list_json.order[i][1] + "</p></td><td><p type='button' data-toggle='modal' data-target='#orderModal' onclick='get_order(" + list_json.order[i][0] + ");'>查看</p></td>	<td><p type='button' data-toggle='modal' data-target='#delieverModal' id='deliever_" + list_json.order[i][0] + "' onclick='get_order_c2d(" + list_json.order[i][0] + ");'>" + list_json.order[i][2]+ "</p></td><td><p>"
+		for (var i = list_json.order.length - 1; i >= 0; i--) {
+			add += "<tr><td><p type='button' data-toggle='modal' data-target='#customerModal' id='customer_" + list_json.order[i][0] + "' onclick='get_order_s2c(" + list_json.order[i][0] + ");'>" + list_json.order[i][3] + "</p></td><td><p type='button' data-toggle='modal' data-target='#orderModal' onclick='get_order(" + list_json.order[i][0] + ");'>查看</p></td>	<td><p type='button' data-toggle='modal' data-target='#delieverModal' id='deliever_" + list_json.order[i][0] + "' onclick='get_order_s2d(" + list_json.order[i][0] + ");'>" + list_json.order[i][2]+ "</p></td><td><p id='status_" + list_json.order[i][0] + "'>"
 			switch(list_json.order[i][4]) {
-				case "1":
+				case  1 :
 					add += "餐點製作中</p></td>";
 					count += 1;
 					break;
-				case "2":
+				case  2:
 					add += "餐點製作完成</p></td>";
 						break;
-				case "3":
+				case  3:
 					add += "送餐中</p></td>";
 					break;
-				case "4":
+				case  4:
 					add += "餐點已送達</p></td>";
 					break;
-				case "5":
+				case 5:
 					add += "完成</p></td>";
 					break;
 				default:
 					add += "未知狀態</p></td>";
 				}
 			if (list_json.order[i][4] == "1") {
-				add += "<td id='order_" + list_json.order[i][0] + "><button class='btn btn-warning' 'onclick='update_order_status(" + list_json.order[i][0] + ");'>餐點完成</button></td></tr>";
+				add += "<td id='order_" + list_json.order[i][0] + "'><button class='btn btn-warning' onclick='update_order_status(" + list_json.order[i][0] + ");'>餐點完成</button></td></tr>";
 			}
 			else {
 				add += "<td></td></tr>";
 			}
-			if (count > 0) {
-				alert("有" + count + "個訂單需製作");
-			}
 		}
+		if (count > 0) {
+				alert("有" + count + "個訂單需製作");
+		}
+		document.getElementById("order_list").innerHTML = add;
 	}
+	xhr.send();
 }
 
 function get_order_s2d(id){
 	var xhr = new XMLHttpRequest;
 	xhr.open("POST", "http://114.35.143.250:5000/api/get_order");
-	xhr.send(JSON.stringfy({"ID": id}));
+	xhr.setRequestHeader('Content-Type', 'application/json');
+	xhr.send(JSON.stringify({"ID": id}));
 	xhr.onload = function(){
 		var detail = JSON.parse(xhr.responseText);
-		var add = "<p>" + document.getElementById("deliever_" + id).innerHTML + "</p><p>電話：" + detai[0][2][0] + "</p>";
+		var add = "<p>" + document.getElementById("deliever_" + id).innerHTML + "</p><p>電話：" + detail.order[2] + "</p>";
 		document.getElementById("deliever_detail").innerHTML = add;
 	}
 }
@@ -368,14 +338,15 @@ function get_order_s2d(id){
 function get_order(id){
 	var xhr = new XMLHttpRequest;
 	xhr.open("POST", "http://114.35.143.250:5000/api/get_order");
-	xhr.send(JSON.stringfy({"ID": id}));
+	xhr.setRequestHeader('Content-Type', 'application/json');
+	xhr.send(JSON.stringify({"ID": id}));
 	xhr.onload = function(){
 		var detail = JSON.parse(xhr.responseText);
 		var add = "";
 		var total = 0;
-		for (var i = 0; i < detail[0][5].length; i++) {
-			add += "<tr><td>" + detail[0][5][i][0] + "</td><td>" + detail[0][5][i][1] + "</td><td>" + detail[0][5][i][2] + "</td></tr>";
-			total += parseInt(detail[0][5][i][1]) * parseInt(detail[0][5][i][2]);
+		for (var i = 0; i < detail.order[5].length; i++) {
+			add += "<tr><td>" + detail.order[5][i][0] + "</td><td>" + detail.order[5][i][1] + "</td><td>" + detail.order[5][i][2] + "</td></tr>";
+			total += parseInt(detail.order[5][i][1]) * parseInt(detail.order[5][i][2]);
 		}
 		document.getElementById("order_detail").innerHTML = add;
 		document.getElementById("total").innerHTML = "$" + total;
@@ -385,30 +356,33 @@ function get_order(id){
 function get_order_s2c(id){
 	var xhr = new XMLHttpRequest;
 	xhr.open("POST", "http://114.35.143.250:5000/api/get_order");
-	xhr.send(JSON.stringfy({"ID": id}));
+	xhr.setRequestHeader('Content-Type', 'application/json');
+	xhr.send(JSON.stringify({"ID": id}));
 	xhr.onload = function(){
 		var detail = JSON.parse(xhr.responseText);
-		var add = "<p>" + document.getElementById("customer_" + id).innerHTML + "</p><p>電話：" + detail[0][3][0] + "</p><p>地址：" + detail[0][4][0] + "</p>";
+		var add = "<p>" + document.getElementById("customer_" + id).innerHTML + "</p><p>電話：" + detail.order[3] + "</p><p>地址：" + detail.order[4] + "</p>";
+		document.getElementById("customer_detail").innerHTML = add;
 	}
 }
 
 function update_order_status(id){
 	var xhr = new XMLHttpRequest;
 	xhr.open("POST", "http://114.35.143.250:5000/api/update_order_status");
-	var str = document.getElementById("status").innerHTML;
+	xhr.setRequestHeader('Content-Type', 'application/json');
 	var status = 0;
 	for (var i = 0; i < list_json.order.length; i++) {
-		if (id == list_json.order[i][4]) {
+		if (id == list_json.order[i][0]) {
 			status = list_json.order[i][4] + 1;
 		}
 	}
-	xhr.send(JSON.stringfy({"ID": id, "status": status}));
+	xhr.send(JSON.stringify({"ID": id, "status": status})); 
 	xhr.onload = function(){
 		var rsp = JSON.parse(xhr.responseText);
 		if (rsp.rsp_code == "200") {
 			alert("已通知送貨員取餐，仍有" + (count - 1) + "個餐點需製作");
-			document.getElementById("status").innerHTML = "餐點製作完成";
-			document.getElementById("order_" + id).innerHTML = "";
+			list_order_s();
+			/*document.getElementById("status_" + id).innerHTML = "餐點製作完成";
+			document.getElementById("order_" + id).innerHTML = "";*/
 		}
 		else {
 			alert("訂單流程錯誤，請聯繫客服人員，謝謝!");
